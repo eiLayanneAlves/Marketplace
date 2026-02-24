@@ -1,0 +1,19 @@
+<h1>Marketplace</h1>
+
+<a href="/create">Criar anúncio</a>
+<a href="/login">Login</a>
+<a href="/logout">Logout</a>
+
+<hr>
+
+{% for ad in ads %}
+
+<h3>{{ad[1]}}</h3>
+Preço: {{ad[2]}}<br>
+Vendedor: {{ad[3]}}<br>
+
+<a href="/view/{{ad[0]}}">Ver</a>
+
+<hr>
+
+{% endfor %}
