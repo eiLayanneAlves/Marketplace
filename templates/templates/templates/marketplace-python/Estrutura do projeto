@@ -1,0 +1,13 @@
+marketplace-python/
+│
+├── app.py
+├── database.db (criado automaticamente)
+├── templates/
+│   ├── index.html
+│   ├── login.html
+│   ├── register.html
+│   ├── create.html
+│   └── view.html
+│
+└── static/
+    └── style.css
