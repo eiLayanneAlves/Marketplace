@@ -1,0 +1,148 @@
+from flask import Flask, render_template, request, redirect, session, url_for
+import sqlite3
+
+app = Flask(__name__)
+app.secret_key = "segredo123"
+
+def get_db():
+    return sqlite3.connect("database.db")
+
+def criar_banco():
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        password TEXT
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS ads(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        price TEXT,
+        description TEXT,
+        user_id INTEGER
+    )
+    """)
+
+    db.commit()
+    db.close()
+
+criar_banco()
+
+@app.route("/")
+def index():
+    db = get_db()
+    ads = db.execute("""
+    SELECT ads.id, title, price, username 
+    FROM ads JOIN users ON ads.user_id = users.id
+    """).fetchall()
+
+    return render_template("index.html", ads=ads)
+
+@app.route("/register", methods=["GET","POST"])
+def register():
+
+    if request.method == "POST":
+
+        username = request.form["username"]
+        password = request.form["password"]
+
+        db = get_db()
+
+        try:
+            db.execute("INSERT INTO users(username,password) VALUES (?,?)",
+                       (username,password))
+            db.commit()
+            return redirect("/login")
+
+        except:
+            return "Usuário já existe"
+
+    return render_template("register.html")
+
+@app.route("/login", methods=["GET","POST"])
+def login():
+
+    if request.method == "POST":
+
+        username = request.form["username"]
+        password = request.form["password"]
+
+        db = get_db()
+
+        user = db.execute(
+            "SELECT * FROM users WHERE username=? AND password=?",
+            (username,password)
+        ).fetchone()
+
+        if user:
+            session["user_id"] = user[0]
+            session["username"] = user[1]
+            return redirect("/")
+        else:
+            return "Login inválido"
+
+    return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
+
+@app.route("/create", methods=["GET","POST"])
+def create():
+
+    if "user_id" not in session:
+        return redirect("/login")
+
+    if request.method == "POST":
+
+        title = request.form["title"]
+        price = request.form["price"]
+        description = request.form["description"]
+
+        db = get_db()
+
+        db.execute(
+            "INSERT INTO ads(title,price,description,user_id) VALUES (?,?,?,?)",
+            (title,price,description,session["user_id"])
+        )
+
+        db.commit()
+
+        return redirect("/")
+
+    return render_template("create.html")
+
+@app.route("/view/<int:id>")
+def view(id):
+
+    db = get_db()
+
+    ad = db.execute(
+        "SELECT ads.*, username FROM ads JOIN users ON ads.user_id = users.id WHERE ads.id=?",
+        (id,)
+    ).fetchone()
+
+    return render_template("view.html", ad=ad)
+
+@app.route("/delete/<int:id>")
+def delete(id):
+
+    db = get_db()
+
+    db.execute(
+        "DELETE FROM ads WHERE id=? AND user_id=?",
+        (id, session["user_id"])
+    )
+
+    db.commit()
+
+    return redirect("/")
+
+app.run(debug=True)
